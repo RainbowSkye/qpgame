@@ -1,0 +1,81 @@
+syntax = "proto3";
+option go_package = "user/pb;pb";
+
+message RegisterParams{
+  string account = 1;
+  string password = 2;
+  int32 loginPlatform = 3;
+  string smsCode = 4;
+}
+
+message RegisterResponse{
+  string uid = 1;
+}
+
+message UserParams{
+  string uid = 1;
+}
+
+message UserDTO{
+  string uid = 1;
+  string nickname = 2;
+  string avatar = 3;
+  string avatarFrame = 4;
+  int32 sex = 5;
+  int64 gold = 6;
+  string emailArr = 7;
+  string mobilePhone = 8;
+  string realName = 9;
+  bool isAgent = 10;
+  string roomID = 11;
+  string frontendId = 12;
+  string address = 13;
+  string location = 14;
+  int32 isBlockedAccount = 15;
+  string lastLoginIP = 16;
+  int64 lastLoginTime = 17;
+  int64 createTime = 18;
+  repeated InviteMsg inviteMsg = 19;
+}
+
+message InviteMsg {
+  int64 uid = 1;
+  string nickname = 2;
+  int64 unionID = 3;
+  bool partner = 4;
+  string unionName = 5;
+}
+
+message UnionInfo {
+  int64  inviteID = 1;
+  int64  unionID = 2;
+  string spreaderID = 3;
+  int64 score = 4;
+  int64 safeScore = 5;
+  bool partner = 6;
+  int64 rebateRate = 7;
+  int64 todayDraw = 8;
+  int64 yesterdayDraw = 9;
+  int64 totalDraw = 10;
+  int64 weekDraw = 11;
+  int64 memberTodayDraw = 12;
+  int64 memberYesterdayDraw = 13;
+  int64 todayBigWinDraw = 14;
+  int64 yesterdayBigWinDraw = 15;
+  int64 memberTodayBigWinDraw = 16;
+  int64 memberYesterdayBigWinDraw = 17;
+  int64 todayProvideRebate = 18;
+  int64 yesterdayProvideRebate = 19;
+  int64 todayRebate = 20;
+  int64 yesterdayRebate = 21;
+  int64 totalRebate = 22;
+  int64 todayWin = 23;
+  int64 yesterdayWin = 24;
+  int64 prohibitGame = 25;
+  int64 joinTime = 26;
+}
+
+service UserService{
+  rpc Register(RegisterParams) returns(RegisterResponse);
+  rpc FindUserByUid(UserParams) returns(UserDTO);
+}
