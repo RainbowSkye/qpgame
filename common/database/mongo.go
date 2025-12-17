@@ -22,8 +22,9 @@ func NewMongo() *MongoManager {
 
 	opts := options.Client().ApplyURI(config.Conf.Database.MongoConf.Url)
 	opts.SetAuth(options.Credential{
-		Username: config.Conf.Database.MongoConf.UserName,
-		Password: config.Conf.Database.MongoConf.Password,
+		Username:   config.Conf.Database.MongoConf.UserName,
+		Password:   config.Conf.Database.MongoConf.Password,
+		AuthSource: "admin",
 	})
 	opts.SetMinPoolSize(uint64(config.Conf.Database.MongoConf.MinPoolSize))
 	opts.SetMaxPoolSize(uint64(config.Conf.Database.MongoConf.MaxPoolSize))

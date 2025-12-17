@@ -11,6 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"user/internal/service"
+	"user/pb"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -42,6 +44,9 @@ func Run(ctx context.Context) error {
 			zap.L().Error("register etcd fail, err: ", zap.Error(err))
 			panic(err)
 		}
+
+		// 注册grpc服务
+		pb.RegisterUserServiceServer(server, service.NewUserService(manager))
 
 		if err = server.Serve(lis); err != nil {
 			zap.L().Error("grpc server fail, err: ", zap.Error(err))

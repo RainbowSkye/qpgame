@@ -3,8 +3,10 @@ package app
 import (
 	"common/config"
 	"common/logs"
+	"common/rpc"
 	"context"
 	"fmt"
+	"gateway/auth"
 	"gateway/router"
 	"os"
 	"os/signal"
@@ -21,14 +23,18 @@ func Run(ctx context.Context) error {
 	zap.L().Info("初始化日志...")
 
 	go func() {
+		// 初始化grpc客户端
+		rpc.Init()
+
 		// 启动gin路由
 		r := router.InitRouter()
+		r.Use(auth.Cors())
 		if err := r.Run(fmt.Sprintf(":%d", config.Conf.HttpPort)); err != nil {
 			zap.L().Error("启动gin失败，err: ", zap.Error(err))
 			panic(err)
 		}
 	}()
-
+	zap.L().Info("here...")
 	stop := func() {
 		zap.L().Info("stop server")
 		time.Sleep(1 * time.Second)

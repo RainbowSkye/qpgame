@@ -1,3 +1,24 @@
 {"level":"INFO","time":"2025-12-14T20:45:02.558+0800","caller":"app/app.go:21","msg":"初始化日志..."}
 {"level":"INFO","time":"2025-12-14T20:45:10.984+0800","caller":"app/app.go:40","msg":"stop server"}
 {"level":"INFO","time":"2025-12-14T20:45:11.984+0800","caller":"app/app.go:57","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-15T23:40:24.824+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:40:27.830+0800","caller":"database/mongo.go:37","msg":"ping mongo failed, err: ","error":"server selection error: context deadline exceeded, current topology: { Type: Unknown, Servers: [{ Addr: 127.0.0.1:27018, Type: Unknown, Last error: dial tcp 127.0.0.1:27018: connectex: No connection could be made because the target machine actively refused it. }, ] }"}
+{"level":"INFO","time":"2025-12-15T23:41:34.268+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:41:34.280+0800","caller":"database/mongo.go:37","msg":"ping mongo failed, err: ","error":"connection pool for 127.0.0.1:27017 was cleared because another operation failed with: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+{"level":"INFO","time":"2025-12-15T23:45:48.799+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:45:48.811+0800","caller":"database/mongo.go:37","msg":"ping mongo failed, err: ","error":"connection pool for 127.0.0.1:27017 was cleared because another operation failed with: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+{"level":"INFO","time":"2025-12-15T23:54:09.719+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:54:09.730+0800","caller":"database/mongo.go:38","msg":"ping mongo failed, err: ","error":"connection pool for 127.0.0.1:27017 was cleared because another operation failed with: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+{"level":"INFO","time":"2025-12-15T23:54:17.032+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:54:17.044+0800","caller":"database/mongo.go:38","msg":"ping mongo failed, err: ","error":"connection pool for 127.0.0.1:27017 was cleared because another operation failed with: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+{"level":"INFO","time":"2025-12-15T23:54:58.625+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-15T23:54:58.637+0800","caller":"database/mongo.go:38","msg":"ping mongo failed, err: ","error":"connection pool for 127.0.0.1:27017 was cleared because another operation failed with: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+{"level":"INFO","time":"2025-12-15T23:58:11.150+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-15T23:58:39.163+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-15T23:58:40.164+0800","caller":"app/app.go:76","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-16T21:45:33.104+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-16T21:52:15.485+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-16T21:52:16.487+0800","caller":"app/app.go:76","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-16T23:49:19.921+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-17T00:17:20.139+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-17T00:17:21.141+0800","caller":"app/app.go:76","msg":"stop by interrupt"}

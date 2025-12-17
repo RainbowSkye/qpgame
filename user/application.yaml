@@ -19,9 +19,9 @@ etcd:
     ttl: 10
 db:
   mongo:
-    url: mongodb://127.0.0.1:27018
+    url: mongodb://127.0.0.1:27017
     userName: root
-    password: root123456
+    password: root
     minPoolSize: 10
     maxPoolSize: 100
     db: mschess
