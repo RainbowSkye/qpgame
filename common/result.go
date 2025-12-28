@@ -26,3 +26,16 @@ func Fail(ctx *gin.Context, err *err.Error) {
 		Msg:  err.Error(),
 	})
 }
+
+func F(err *err.Error) Result {
+	return Result{
+		Code: err.Code,
+	}
+}
+
+func S(data any) Result {
+	return Result{
+		Code: biz.OK,
+		Msg:  data,
+	}
+}

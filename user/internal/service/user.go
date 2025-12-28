@@ -56,6 +56,7 @@ func (u *UserService) wxRegister(ctx context.Context, req *pb.RegisterParams) (*
 		WxAccount:  req.Account,
 		CreateTime: time.Now(),
 	}
+	err = u.accountDao.SaveAccount(ctx, account)
 	if err != nil {
 		return &entity.Account{}, err
 	}

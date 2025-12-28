@@ -3,10 +3,10 @@ package app
 import (
 	"common/config"
 	"common/logs"
-	"common/rpc"
+	"connector/route"
 	"context"
-	"fmt"
-	"gateway/router"
+	"core/repo"
+	"framework/connector"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,24 +16,22 @@ import (
 )
 
 // Run 启动各种服务
-func Run(ctx context.Context) error {
+func Run(ctx context.Context, serverId string) error {
 	// 初始化日志服务
 	logs.InitLogger(&config.Conf.Log)
 	zap.L().Info("初始化日志...")
 
+	exit := func() {}
 	go func() {
-		// 初始化grpc客户端
-		rpc.Init()
-
-		// 启动gin路由
-		r := router.InitRouter()
-		if err := r.Run(fmt.Sprintf(":%d", config.Conf.HttpPort)); err != nil {
-			zap.L().Error("启动gin失败，err: ", zap.Error(err))
-			panic(err)
-		}
+		c := connector.Default()
+		exit = c.Close
+		manager := repo.New()
+		c.RegisterHandler(route.Register(manager))
+		c.Run(serverId)
 	}()
-	zap.L().Info("here...")
+
 	stop := func() {
+		exit()
 		zap.L().Info("stop server")
 		time.Sleep(1 * time.Second)
 	}

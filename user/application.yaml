@@ -1,4 +1,4 @@
-metricPort: 5854
+metricPort: 5853
 appName: user
 log:
   level: DEBUG
