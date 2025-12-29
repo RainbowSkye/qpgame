@@ -4,6 +4,7 @@ import (
 	"context"
 	"core/model/entity"
 	"core/repo"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -33,7 +34,22 @@ func (u *UserDao) FindUserByUid(ctx context.Context, uid string) (*entity.User, 
 
 func (u *UserDao) Insert(ctx context.Context, user *entity.User) error {
 	db := u.repo.Mongo.Db.Collection("user")
+	log.Printf("user = %+v", user)
 	_, err := db.InsertOne(ctx, user)
+	zap.L().Info("INSERT user", zap.Any("user", user))
+	return err
+}
+
+func (u *UserDao) UpdateUserAddress(ctx context.Context, user *entity.User) error {
+	db := u.repo.Mongo.Db.Collection("user")
+	_, err := db.UpdateOne(ctx, bson.M{
+		"uid": user.Uid,
+	}, bson.M{
+		"$set": bson.M{
+			"address":  user.Address,
+			"location": user.Location,
+		},
+	})
 	return err
 }
 

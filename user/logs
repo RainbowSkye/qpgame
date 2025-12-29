@@ -42,3 +42,16 @@
 {"level":"INFO","time":"2025-12-27T00:05:53.020+0800","caller":"app/app.go:25","msg":"初始化日志..."}
 {"level":"INFO","time":"2025-12-27T00:06:25.026+0800","caller":"app/app.go:58","msg":"stop server"}
 {"level":"INFO","time":"2025-12-27T00:06:26.027+0800","caller":"app/app.go:76","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-28T18:22:26.738+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-28T18:22:26.757+0800","caller":"app/app.go:36","msg":"listen tcp fail, err: ","error":"listen tcp 127.0.0.1:11500: bind: An attempt was made to access a socket in a way forbidden by its access permissions."}
+{"level":"INFO","time":"2025-12-28T18:22:34.735+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"ERROR","time":"2025-12-28T18:22:34.753+0800","caller":"app/app.go:36","msg":"listen tcp fail, err: ","error":"listen tcp 127.0.0.1:11500: bind: An attempt was made to access a socket in a way forbidden by its access permissions."}
+{"level":"INFO","time":"2025-12-28T18:27:27.443+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-28T18:46:27.296+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-28T18:46:28.298+0800","caller":"app/app.go:76","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-28T18:46:30.112+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-28T19:42:22.560+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-28T19:42:23.565+0800","caller":"app/app.go:76","msg":"stop by interrupt"}
+{"level":"INFO","time":"2025-12-28T19:42:33.309+0800","caller":"app/app.go:25","msg":"初始化日志..."}
+{"level":"INFO","time":"2025-12-28T19:44:20.238+0800","caller":"app/app.go:58","msg":"stop server"}
+{"level":"INFO","time":"2025-12-28T19:44:21.241+0800","caller":"app/app.go:76","msg":"stop by interrupt"}

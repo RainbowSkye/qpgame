@@ -14,7 +14,7 @@ db:
     password: root
     minPoolSize: 10
     maxPoolSize: 100
-    db: msqp
+    db: qpgame
   redis:
     addr: 127.0.0.1:6379
     poolSize: 10

@@ -9,6 +9,7 @@ import (
 	"core/repo"
 	"fmt"
 	"framework/game"
+	hall "hall/models/request"
 	"time"
 
 	"go.uber.org/zap"
@@ -43,6 +44,21 @@ func (s *UserService) FindUserByUid(ctx context.Context, uid string, info reques
 		}
 	}
 	return user, nil
+}
+
+func (s *UserService) UpdateUserAddress(uid string, req hall.UpdateUserAddressReq) error {
+	user := &entity.User{
+		Uid:      uid,
+		Address:  req.Address,
+		Location: req.Location,
+	}
+
+	err := s.userDao.UpdateUserAddress(context.TODO(), user)
+	if err != nil {
+		zap.L().Error("userDao.UpdateUserAddressByUid err: ", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func NewUserService(r *repo.Manager) *UserService {
