@@ -23,6 +23,7 @@ type Config struct {
 	ServersConf ServersConf                `json:"serversConf"`
 	Log         LogConf                    `json:"log"`
 }
+
 type ServersConf struct {
 	Nats       NatsConfig         `json:"nats"`
 	Connector  []*ConnectorConfig `json:"connector"`
@@ -45,6 +46,7 @@ type ConnectorConfig struct {
 	Frontend   bool   `json:"frontend"`
 	ServerType string `json:"serverType"`
 }
+
 type NatsConfig struct {
 	Url string `json:"url"`
 }
@@ -150,6 +152,7 @@ func (c *Config) GetConnector(serverId string) *ConnectorConfig {
 	}
 	return nil
 }
+
 func (c *Config) GetConnectorByServerType(serverType string) *ConnectorConfig {
 	for _, v := range c.ServersConf.Connector {
 		if v.ServerType == serverType {

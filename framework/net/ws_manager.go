@@ -29,24 +29,33 @@ var (
 
 type CheckOriginHandler func(r *http.Request) bool
 
-type Manager struct {
-	sync.RWMutex
-	websocketUpgrade   *websocket.Upgrader
-	ServerId           string
-	CheckOriginHandler CheckOriginHandler
-	clients            map[string]Connection
-	ClientReadChan     chan *MsgPack
-	handlers           map[protocol.PackageType]EventHandler
-	ConnectorHandlers  LogicHandler
-	RemoteReadChan     chan []byte
-	RemoteCli          remote.Client
-}
-
 type HandlerFunc func(session *Session, body []byte) (any, error)
 
 type LogicHandler map[string]HandlerFunc
 
 type EventHandler func(packet *protocol.Packet, c Connection) error
+
+type Manager struct {
+	sync.RWMutex
+	websocketUpgrade   *websocket.Upgrader
+	ServerId           string // 在connector赋值
+	CheckOriginHandler CheckOriginHandler
+	clients            map[string]Connection
+	ClientReadChan     chan *MsgPack
+	handlers           map[protocol.PackageType]EventHandler
+	ConnectorHandlers  LogicHandler // 在connector赋值
+	RemoteReadChan     chan []byte
+	RemoteCli          remote.Client // 在connector赋值
+}
+
+func NewManager() *Manager {
+	return &Manager{
+		ClientReadChan: make(chan *MsgPack, 1024),
+		clients:        make(map[string]Connection),
+		handlers:       make(map[protocol.PackageType]EventHandler),
+		RemoteReadChan: make(chan []byte, 1024),
+	}
+}
 
 func (m *Manager) Run(addr string) {
 	go m.clientReadChanHandler()
@@ -54,6 +63,7 @@ func (m *Manager) Run(addr string) {
 	http.HandleFunc("/", m.serveWs)
 	// 设置不同的消息处理器
 	m.setupEventHandlers()
+
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		zap.L().Fatal("connector listen serve err: ", zap.Error(err))
@@ -172,7 +182,7 @@ func (m *Manager) MessageHandler(packet *protocol.Packet, c Connection) error {
 	serverType := routers[0]
 	handlerMethod := fmt.Sprintf("%s.%s", routers[1], routers[2])
 	connectorConfig := game.Conf.GetConnectorByServerType(serverType)
-	if connectorConfig != nil {
+	if connectorConfig != nil { // connectorConfig = "connector"
 		// 本地connector服务器处理
 		handler, ok := m.ConnectorHandlers[handlerMethod]
 		if ok {
@@ -207,7 +217,7 @@ func (m *Manager) MessageHandler(packet *protocol.Packet, c Connection) error {
 			Dst:         dst,
 			Router:      handlerMethod,
 			Body:        message,
-			SessionData: c.GetSession().data,
+			SessionData: c.GetSession().data, // 一个map[string]any
 		}
 		data, _ := json.Marshal(msg)
 		err = m.RemoteCli.SendMsg(dst, data)
@@ -256,13 +266,4 @@ func (m *Manager) selectDst(serverType string) (string, error) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	index := rand.Intn(len(serversConfigs))
 	return serversConfigs[index].ID, nil
-}
-
-func NewManager() *Manager {
-	return &Manager{
-		ClientReadChan: make(chan *MsgPack, 1024),
-		clients:        make(map[string]Connection),
-		handlers:       make(map[protocol.PackageType]EventHandler),
-		RemoteReadChan: make(chan []byte, 1024),
-	}
 }

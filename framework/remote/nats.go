@@ -42,6 +42,7 @@ func (n *NatsClient) sub() {
 	}
 }
 
+// SendMsg 发布
 func (n *NatsClient) SendMsg(dst string, data []byte) error {
 	if n.conn != nil {
 		return n.conn.Publish(dst, data)

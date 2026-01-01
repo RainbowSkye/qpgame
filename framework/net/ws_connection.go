@@ -27,6 +27,18 @@ type WsConnection struct {
 	Session   *Session
 }
 
+func NewWsConnection(conn *websocket.Conn, manager *Manager) *WsConnection {
+	cid := fmt.Sprintf("%s-%s-%d", uuid.NewString(), manager.ServerId, atomic.AddUint64(&cidBase, 1))
+	return &WsConnection{
+		Cid:       cid,
+		Conn:      conn,
+		Manager:   manager,
+		ReadChan:  manager.ClientReadChan,
+		WriteChan: make(chan []byte, 1024),
+		Session:   NewSession(cid),
+	}
+}
+
 func (w *WsConnection) Run() {
 	go w.readMessage()
 	go w.writeMessage()
@@ -113,16 +125,4 @@ func (w *WsConnection) PongHandler(data string) error {
 		return err
 	}
 	return nil
-}
-
-func NewWsConnection(conn *websocket.Conn, manager *Manager) *WsConnection {
-	cid := fmt.Sprintf("%s-%s-%d", uuid.NewString(), manager.ServerId, atomic.AddUint64(&cidBase, 1))
-	return &WsConnection{
-		Cid:       cid,
-		Conn:      conn,
-		Manager:   manager,
-		ReadChan:  manager.ClientReadChan,
-		WriteChan: make(chan []byte, 1024),
-		Session:   NewSession(cid),
-	}
 }
