@@ -794,9 +794,9 @@ var file_user_proto_goTypes = []any{
 var file_user_proto_depIdxs = []int32{
 	4, // 0: UserDTO.inviteMsg:type_name -> InviteMsg
 	0, // 1: UserService.Register:input_type -> RegisterParams
-	2, // 2: UserService.FindUserByUid:input_type -> UserParams
+	2, // 2: UserService.FindAndSaveUserByUid:input_type -> UserParams
 	1, // 3: UserService.Register:output_type -> RegisterResponse
-	3, // 4: UserService.FindUserByUid:output_type -> UserDTO
+	3, // 4: UserService.FindAndSaveUserByUid:output_type -> UserDTO
 	3, // [3:5] is the sub-list for method output_type
 	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

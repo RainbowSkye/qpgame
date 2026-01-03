@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"framework/game"
-	"hall/app"
+	"game/app"
 	"log"
 	"os"
 
@@ -15,9 +15,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "hall",
-	Short: "hall 大厅相关",
-	Long:  `hall 大厅相关`,
+	Use:   "game",
+	Short: "game 相关",
+	Long:  `game 相关`,
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 	PostRun: func(cmd *cobra.Command, args []string) {
@@ -33,7 +33,7 @@ var (
 func init() {
 	rootCmd.Flags().StringVar(&configFile, "config", "application.yaml", "app config yml file")
 	rootCmd.Flags().StringVar(&gameConfigDir, "gameDir", "../config", "game config dir")
-	rootCmd.Flags().StringVar(&serverId, "serverId", "hall-001", "app server id， required")
+	rootCmd.Flags().StringVar(&serverId, "serverId", "game-001", "app server id， required")
 	_ = rootCmd.MarkFlagRequired("serverId")
 }
 

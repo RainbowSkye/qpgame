@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	UserService_Register_FullMethodName      = "/UserService/Register"
-	UserService_FindUserByUid_FullMethodName = "/UserService/FindUserByUid"
+	UserService_FindUserByUid_FullMethodName = "/UserService/FindAndSaveUserByUid"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -79,7 +79,7 @@ func (UnimplementedUserServiceServer) Register(context.Context, *RegisterParams)
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedUserServiceServer) FindUserByUid(context.Context, *UserParams) (*UserDTO, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindUserByUid not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method FindAndSaveUserByUid not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -150,7 +150,7 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_Register_Handler,
 		},
 		{
-			MethodName: "FindUserByUid",
+			MethodName: "FindAndSaveUserByUid",
 			Handler:    _UserService_FindUserByUid_Handler,
 		},
 	},

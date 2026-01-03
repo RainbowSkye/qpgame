@@ -2,7 +2,7 @@ package dao
 
 import (
 	"context"
-	"core/model/entity"
+	"core/models/entity"
 	"core/repo"
 )
 

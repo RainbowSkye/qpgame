@@ -1,5 +1,5 @@
 httpPort: 13000
-metricPort: 5855
+metricPort: 15855
 appName: gate
 log:
   level: DEBUG

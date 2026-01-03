@@ -1,29 +1,31 @@
 package entity
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
 
 type User struct {
-	Id               primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Uid              string             `bson:"uid" json:"uid"`                           // 用户唯一ID
-	IsBlockedAccount int                `bson:"isBlockedAccount" json:"isBlockedAccount"` // 是否冻结帐号
-	Location         string             `bson:"location" json:"location"`                 // 地理位置信息，国家省市街道
-	FrontendId       string             `bson:"frontendId" json:"frontendId"`             // 前端服务器ID
-	RoomID           string             `bson:"roomID" json:"roomID"`                     // 房间ID
-	IsAgent          bool               `bson:"isAgent" json:"isAgent"`                   // 是否是代理
-	RealName         string             `bson:"realName" json:"realName"`                 // 实名认证信息
-	MobilePhone      string             `bson:"mobilePhone" json:"mobilePhone"`           // 绑定的手机
-	InviteMsg        InviteMsg          `bson:"inviteMsg" json:"inviteMsg"`
-	EmailArr         string             `bson:"emailArr" json:"emailArr"` // 邮件
-	Gold             int64              `bson:"gold" json:"gold"`         // 金币(房卡)
-	UnionInfo        []*UnionInfo       `bson:"unionInfo" json:"unionInfo"`
-	Sex              int                `bson:"sex" json:"sex"`                     // 性别
-	CreateTime       int64              `bson:"createTime" json:"createTime"`       // 创建时间
-	LastLoginTime    int64              `bson:"lastLoginTime" json:"lastLoginTime"` // 最后登录时间
-	LastLoginIp      string             `bson:"lastLoginIp" json:"lastLoginIp"`     // 最后登录IP
-	Address          string             `bson:"address" json:"address"`             // 地理位置经纬度
-	AvatarFrame      string             `bson:"avatarFrame" json:"avatarFrame"`     // 头像框
-	Nickname         string             `bson:"nickname" json:"nickname"`           // 昵称
-	Avatar           string             `bson:"avatar" json:"avatar"`               // 头像
+	Id               bson.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Uid              string        `bson:"uid" json:"uid"`                           // 用户唯一ID
+	IsBlockedAccount int           `bson:"isBlockedAccount" json:"isBlockedAccount"` // 是否冻结帐号
+	Location         string        `bson:"location" json:"location"`                 // 地理位置信息，国家省市街道
+	FrontendId       string        `bson:"frontendId" json:"frontendId"`             // 前端服务器ID
+	RoomID           string        `bson:"roomID" json:"roomID"`                     // 房间ID
+	IsAgent          bool          `bson:"isAgent" json:"isAgent"`                   // 是否是代理
+	RealName         string        `bson:"realName" json:"realName"`                 // 实名认证信息
+	MobilePhone      string        `bson:"mobilePhone" json:"mobilePhone"`           // 绑定的手机
+	InviteMsg        InviteMsg     `bson:"inviteMsg" json:"inviteMsg"`
+	EmailArr         string        `bson:"emailArr" json:"emailArr"` // 邮件
+	Gold             int64         `bson:"gold" json:"gold"`         // 金币(房卡)
+	UnionInfo        []*UnionInfo  `bson:"unionInfo" json:"unionInfo"`
+	Sex              int           `bson:"sex" json:"sex"`                     // 性别
+	CreateTime       int64         `bson:"createTime" json:"createTime"`       // 创建时间
+	LastLoginTime    int64         `bson:"lastLoginTime" json:"lastLoginTime"` // 最后登录时间
+	LastLoginIp      string        `bson:"lastLoginIp" json:"lastLoginIp"`     // 最后登录IP
+	Address          string        `bson:"address" json:"address"`             // 地理位置经纬度
+	AvatarFrame      string        `bson:"avatarFrame" json:"avatarFrame"`     // 头像框
+	Nickname         string        `bson:"nickname" json:"nickname"`           // 昵称
+	Avatar           string        `bson:"avatar" json:"avatar"`               // 头像
 }
 
 type InviteMsg struct {

@@ -2,11 +2,11 @@ package dao
 
 import (
 	"context"
-	"core/model/entity"
+	"core/models/entity"
 	"core/repo"
 	"log"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 )
@@ -24,6 +24,7 @@ func (u *UserDao) FindUserByUid(ctx context.Context, uid string) (*entity.User, 
 	err := singleResult.Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
+			zap.L().Info("uid 不存在")
 			return nil, nil
 		}
 		zap.L().Error("ENTER FindUserByUid", zap.String("uid", uid))

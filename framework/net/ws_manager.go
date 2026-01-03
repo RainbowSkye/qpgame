@@ -1,6 +1,7 @@
 package net
 
 import (
+	"common/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +47,7 @@ type Manager struct {
 	ConnectorHandlers  LogicHandler // 在connector赋值
 	RemoteReadChan     chan []byte
 	RemoteCli          remote.Client // 在connector赋值
+	RemotePushChan     chan *remote.Msg
 }
 
 func NewManager() *Manager {
@@ -54,12 +56,14 @@ func NewManager() *Manager {
 		clients:        make(map[string]Connection),
 		handlers:       make(map[protocol.PackageType]EventHandler),
 		RemoteReadChan: make(chan []byte, 1024),
+		RemotePushChan: make(chan *remote.Msg, 1024),
 	}
 }
 
 func (m *Manager) Run(addr string) {
 	go m.clientReadChanHandler()
 	go m.remoteReadChanHandler()
+	go m.remotePushChanHandler()
 	http.HandleFunc("/", m.serveWs)
 	// 设置不同的消息处理器
 	m.setupEventHandlers()
@@ -248,13 +252,35 @@ func (m *Manager) routeEvent(packet *protocol.Packet, cid string) error {
 	return errors.New("no client found")
 }
 
+// nat订阅的消息
 func (m *Manager) remoteReadChanHandler() {
-	for {
-		select {
-		case msg := <-m.RemoteReadChan:
-			zap.L().Info("sub nats msg: " + string(msg))
+	for body := range m.RemoteReadChan {
+		zap.L().Info("sub nats msg: " + string(body))
+		var msg remote.Msg
+		if err := json.Unmarshal(body, &msg); err != nil {
+			zap.L().Error("nats remote message format err: " + err.Error())
+			continue
+		}
+
+		// 需要特出处理，session类型是存储在connection中的session 并不 推送客户端
+		if msg.Type == remote.SessionType {
+			m.setSessionData(msg)
+			continue
+		}
+
+		if msg.Body != nil {
+			if msg.Body.Type == protocol.Request || msg.Body.Type == protocol.Response {
+				// 给客户端回信息 都是 response
+				msg.Body.Type = protocol.Response
+				m.Response(&msg)
+			}
+
+			if msg.Body.Type == protocol.Push {
+				m.RemotePushChan <- &msg
+			}
 		}
 	}
+
 }
 
 func (m *Manager) selectDst(serverType string) (string, error) {
@@ -266,4 +292,52 @@ func (m *Manager) selectDst(serverType string) (string, error) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	index := rand.Intn(len(serversConfigs))
 	return serversConfigs[index].ID, nil
+}
+
+func (m *Manager) setSessionData(msg remote.Msg) {
+	m.RLock()
+	defer m.RUnlock()
+	conn, ok := m.clients[msg.Cid]
+	if ok {
+		conn.GetSession().SetData(msg.Uid, msg.SessionData)
+	}
+}
+
+func (m *Manager) Response(msg *remote.Msg) {
+	conn, ok := m.clients[msg.Cid]
+	if !ok {
+		zap.L().Sugar().Info("%s client down, uid = %s", msg.Cid, msg.Uid)
+		return
+	}
+
+	buf, err := protocol.MessageEncode(msg.Body)
+	if err != nil {
+		zap.L().Sugar().Error("Response MessageEncode err:%v", zap.Error(err))
+		return
+	}
+
+	res, err := protocol.Encode(protocol.Data, buf)
+	if err != nil {
+		zap.L().Sugar().Error("Response Encode err:%v", zap.Error(err))
+		return
+	}
+
+	if msg.Body.Type == protocol.Push {
+		for _, v := range m.clients {
+			if utils.Contains(msg.PushUser, v.GetSession().Uid) {
+				v.SendMessage(res)
+			}
+		}
+	} else {
+		conn.SendMessage(res)
+	}
+}
+
+func (m *Manager) remotePushChanHandler() {
+	for body := range m.RemotePushChan {
+		zap.L().Sugar().Info("nats push message:%v", body)
+		if body.Body.Type == protocol.Push {
+			m.Response(body)
+		}
+	}
 }
