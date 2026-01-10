@@ -61,12 +61,13 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) Run(addr string) {
+	// 设置不同的消息处理器
+	m.setupEventHandlers()
+
 	go m.clientReadChanHandler()
 	go m.remoteReadChanHandler()
 	go m.remotePushChanHandler()
 	http.HandleFunc("/", m.serveWs)
-	// 设置不同的消息处理器
-	m.setupEventHandlers()
 
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
@@ -280,7 +281,6 @@ func (m *Manager) remoteReadChanHandler() {
 			}
 		}
 	}
-
 }
 
 func (m *Manager) selectDst(serverType string) (string, error) {

@@ -10,15 +10,16 @@ type RoomCreator struct {
 type CreatorType int
 
 const (
-	UserCreatorType  CreatorType = 1
-	UnionCreatorType             = 2
+	UserCreatorType  CreatorType = 1 // 玩家创建
+	UnionCreatorType             = 2 // 联盟创建
 )
 
 type RoomUser struct {
-	UserInfo   UserInfo   `json:"userInfo"`
-	ChairID    int        `json:"chairID"`
-	UserStatus UserStatus `json:"userStatus"`
+	UserInfo   UserInfo   `json:"userInfo"`   // 用户信息
+	ChairID    int        `json:"chairID"`    // 座次ID
+	UserStatus UserStatus `json:"userStatus"` // 用户状态
 }
+
 type UserInfo struct {
 	Uid          string `json:"uid"`
 	Nickname     string `json:"nickname"`

@@ -78,7 +78,6 @@ func (w *WsConnection) readMessage() {
 					Body: msg,
 				}
 			}
-
 		} else {
 			zap.L().Info("unsupported message type, messageType: ")
 		}
