@@ -36,7 +36,6 @@ func (g *GameHandler) RoomMessageNotify(session *remote.Session, msg []byte) any
 	}
 
 	roomId, ok := session.Get("roomId")
-	fmt.Println("roomId = ", roomId)
 	if !ok {
 		common.F(biz.NotInRoom)
 	}

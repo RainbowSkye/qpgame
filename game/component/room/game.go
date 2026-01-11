@@ -1,7 +1,11 @@
 package room
 
-import "framework/remote"
+import (
+	"framework/remote"
+	"game/component/proto"
+)
 
 type GameFrame interface {
 	GetGameData(session *remote.Session) any
+	StartGame(session *remote.Session, user *proto.RoomUser)
 }

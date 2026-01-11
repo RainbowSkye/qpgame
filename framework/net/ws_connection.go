@@ -19,12 +19,13 @@ var (
 )
 
 type WsConnection struct {
-	Cid       string
-	Conn      *websocket.Conn
-	Manager   *Manager
-	ReadChan  chan *MsgPack
-	WriteChan chan []byte
-	Session   *Session
+	Cid        string
+	Conn       *websocket.Conn
+	Manager    *Manager
+	ReadChan   chan *MsgPack
+	WriteChan  chan []byte
+	Session    *Session
+	pingTicker *time.Ticker
 }
 
 func NewWsConnection(conn *websocket.Conn, manager *Manager) *WsConnection {
@@ -82,11 +83,10 @@ func (w *WsConnection) readMessage() {
 			zap.L().Info("unsupported message type, messageType: ")
 		}
 	}
-
 }
 
 func (w *WsConnection) writeMessage() {
-	ticker := time.NewTicker(pingInterval)
+	w.pingTicker = time.NewTicker(pingInterval)
 	for {
 		select {
 		case msg, ok := <-w.WriteChan:
@@ -100,12 +100,13 @@ func (w *WsConnection) writeMessage() {
 			if err := w.Conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 				zap.L().Sugar().Errorf("client[%s] write message err: %v", w.Cid, err)
 			}
-		case <-ticker.C:
+		case <-w.pingTicker.C:
 			if err := w.Conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				zap.L().Sugar().Errorf("client[%s] ping SetWriteDeadline err :%v", w.Cid, err)
 			}
 			if err := w.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				zap.L().Sugar().Errorf("client[%s] ping err :%v", w.Cid, err)
+				w.Close()
 			}
 		}
 	}
@@ -115,6 +116,9 @@ func (w *WsConnection) writeMessage() {
 func (w *WsConnection) Close() {
 	if w.Conn != nil {
 		w.Conn.Close()
+	}
+	if w.pingTicker != nil {
+		w.pingTicker.Stop()
 	}
 }
 

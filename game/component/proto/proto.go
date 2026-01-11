@@ -77,22 +77,22 @@ func UpdateUserInfoPush(roomId string) any {
 
 func UserLeaveRoomPushData(roomUserInfo *RoomUser) any {
 	pushMsg := map[string]any{
-		"type": UserLeaveRoomPush,
+		"pushRouter": "RoomMessagePush",
+		"type":       UserLeaveRoomPush,
 		"data": map[string]any{
 			"roomUserInfo": roomUserInfo,
 		},
-		"pushRouter": "RoomMessagePush",
 	}
 	return pushMsg
 }
 
 func UserReadyPushData(chairID int) any {
 	pushMsg := map[string]any{
-		"type": UserReadyPush,
+		"pushRouter": "RoomMessagePush",
+		"type":       UserReadyPush,
 		"data": map[string]any{
 			"chairID": chairID,
 		},
-		"pushRouter": "RoomMessagePush",
 	}
 	return pushMsg
 }

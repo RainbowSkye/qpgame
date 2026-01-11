@@ -42,11 +42,11 @@ type Manager struct {
 	ServerId           string // 在connector赋值
 	CheckOriginHandler CheckOriginHandler
 	clients            map[string]Connection
-	ClientReadChan     chan *MsgPack
+	RemoteCli          remote.Client // 在connector赋值
 	handlers           map[protocol.PackageType]EventHandler
 	ConnectorHandlers  LogicHandler // 在connector赋值
+	ClientReadChan     chan *MsgPack
 	RemoteReadChan     chan []byte
-	RemoteCli          remote.Client // 在connector赋值
 	RemotePushChan     chan *remote.Msg
 }
 
@@ -109,6 +109,7 @@ func (m *Manager) Close() {
 	}
 }
 
+// 解析并读取前端传来的数据
 func (m *Manager) clientReadChanHandler() {
 	for {
 		select {
@@ -174,6 +175,7 @@ func (m *Manager) HeartbeatHandler(packet *protocol.Packet, c Connection) error 
 	return c.SendMessage(buf)
 }
 
+// MessageHandler 将消息通过nats转发给对应的node
 func (m *Manager) MessageHandler(packet *protocol.Packet, c Connection) error {
 	message := packet.MessageBody()
 	zap.L().Sugar().Infof("receiver message body, type=%v, router=%v, data:%v",
@@ -253,7 +255,7 @@ func (m *Manager) routeEvent(packet *protocol.Packet, cid string) error {
 	return errors.New("no client found")
 }
 
-// nat订阅的消息
+// 读取node节点通过 nats 推送的消息
 func (m *Manager) remoteReadChanHandler() {
 	for body := range m.RemoteReadChan {
 		zap.L().Info("sub nats msg: " + string(body))
@@ -263,7 +265,7 @@ func (m *Manager) remoteReadChanHandler() {
 			continue
 		}
 
-		// 需要特出处理，session类型是存储在connection中的session 并不 推送客户端
+		// 需要特殊处理，session类型是存储在connection中的session 并不 推送客户端
 		if msg.Type == remote.SessionType {
 			m.setSessionData(msg)
 			continue
@@ -279,6 +281,16 @@ func (m *Manager) remoteReadChanHandler() {
 			if msg.Body.Type == protocol.Push {
 				m.RemotePushChan <- &msg
 			}
+		}
+	}
+}
+
+// 读取node节点通过 nats 推送的消息 - 服务端主动向客户端推送消息
+func (m *Manager) remotePushChanHandler() {
+	for body := range m.RemotePushChan {
+		zap.L().Sugar().Info("nats push message:%v", body)
+		if body.Body.Type == protocol.Push {
+			m.Response(body)
 		}
 	}
 }
@@ -330,14 +342,5 @@ func (m *Manager) Response(msg *remote.Msg) {
 		}
 	} else {
 		conn.SendMessage(res)
-	}
-}
-
-func (m *Manager) remotePushChanHandler() {
-	for body := range m.RemotePushChan {
-		zap.L().Sugar().Info("nats push message:%v", body)
-		if body.Body.Type == protocol.Push {
-			m.Response(body)
-		}
 	}
 }

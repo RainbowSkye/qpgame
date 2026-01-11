@@ -17,6 +17,13 @@ type UnionHandler struct {
 	userService *service.UserService
 }
 
+func NewUnionHandler(r *repo.Manager, um *logic.UnionManager) *UnionHandler {
+	return &UnionHandler{
+		um:          um,
+		userService: service.NewUserService(r),
+	}
+}
+
 func (u *UnionHandler) CreateRoom(session *remote.Session, msg []byte) any {
 	// union 联盟 - 持有房间
 	// unionManager 管理联盟
@@ -44,19 +51,38 @@ func (u *UnionHandler) CreateRoom(session *remote.Session, msg []byte) any {
 	}
 
 	// 3.根据游戏规则、游戏类型、用户信息（创建房间的用户）创建房间
-	// TODO 需要判断 session 中是否已经有roomI， 如果有代表此用户已经在房价中了， 就不能再次创建房间了
+	// TODO 需要判断 session 中是否已经有roomID， 如果有代表此用户已经在房间中了， 就不能再次创建房间了
 	union := u.um.GetUnion(req.UnionID)
-	err = union.CreateRoom(u.userService, session, req, userData)
-	if err != nil {
-		return common.F(biz.UnionNotExist)
+	bizErr := union.CreateRoom(u.userService, session, req, userData)
+	if bizErr != nil {
+		return common.F(bizErr)
 	}
 
 	return common.S(nil)
 }
 
-func NewUnionHandler(r *repo.Manager, um *logic.UnionManager) *UnionHandler {
-	return &UnionHandler{
-		um:          um,
-		userService: service.NewUserService(r),
+func (u *UnionHandler) JoinRoom(session *remote.Session, msg []byte) any {
+	uid := session.GetUid()
+	if len(uid) <= 0 {
+		return common.F(biz.InvalidUsers)
 	}
+
+	var req request.JoinRoomReq
+	err := json.Unmarshal(msg, &req)
+	if err != nil {
+		return common.F(biz.RequestDataError)
+	}
+	// 2.根据session 用户id 查询用户信息
+	userData, err := u.userService.FindUserByUid(context.Background(), uid)
+	if err != nil {
+		return common.F(biz.SqlError)
+	}
+	if userData == nil {
+		return common.F(biz.InvalidUsers)
+	}
+	bizErr := u.um.JoinRoom(session, req.RoomID, userData)
+	if bizErr != nil {
+		return common.F(bizErr)
+	}
+	return common.S(nil)
 }

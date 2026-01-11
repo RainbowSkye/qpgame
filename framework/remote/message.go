@@ -4,13 +4,13 @@ import "framework/protocol"
 
 type Msg struct {
 	Cid         string
-	Body        *protocol.Message
+	Uid         string
+	Type        int // 0 normal 1 session
 	Src         string
 	Dst         string
 	Router      string
-	Uid         string
+	Body        *protocol.Message
 	SessionData map[string]any
-	Type        int // 0 normal 1 session
 	PushUser    []string
 }
 
