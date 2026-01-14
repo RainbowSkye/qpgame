@@ -1,5 +1,16 @@
 package sz
 
+type MessageReq struct {
+	Type int         `json:"type"`
+	Data MessageData `json:"data"`
+}
+
+type MessageData struct {
+	Cuopai bool `json:"cuopai"`
+	Score  int  `json:"score"`
+	Type   int  `json:"type"` // 0 - 跟注， 1 - 加注
+}
+
 type GameStatus int
 
 type GameData struct {
@@ -104,7 +115,7 @@ const (
 	GameStatusPush      = 401 // 游戏状态推送
 	GameSendCardsPush   = 402 // 发牌推送
 	GameLookNotify      = 303 // 看牌请求
-	GameLookPush        = 403
+	GameLookPush        = 403 // 看牌推送
 	GamePourScoreNotify = 304 // 下分请求
 	GamePourScorePush   = 404
 	GameCompareNotify   = 305 // 比牌请求
@@ -179,7 +190,7 @@ func GameSendCardsPushData(handCards [][]int) any {
 }
 
 // GamePourScorePushData 下发推送
-func GamePourScorePushData(chairID, score, chairScore, scores int) any {
+func GamePourScorePushData(chairID, score, chairScore, scores, t int) any {
 	return map[string]any{
 		"type": GamePourScorePush,
 		"data": map[string]any{
@@ -187,7 +198,7 @@ func GamePourScorePushData(chairID, score, chairScore, scores int) any {
 			"score":      score,      // 玩家拥有分数
 			"chairScore": chairScore, // 当前座次所下分数
 			"scores":     scores,     // 金池 所有用户下的分数
-			"type":       0,
+			"type":       t,
 		},
 		"pushRouter": "GameMessagePush",
 	}
@@ -211,6 +222,20 @@ func GameTurnPushData(curChairID, curScore int) any {
 		"data": map[string]any{
 			"curChairID": curChairID,
 			"curScore":   curScore,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+// GameLookPushData 操作推送
+// {"type":403,"data":{"chairID":1,"cards":[60,2,44],"cuopai":false},"pushRouter":"GameMessagePush"}
+func GameLookPushData(chairID int, cards []int, cuopai bool) any {
+	return map[string]any{
+		"type": GameLookPush,
+		"data": map[string]any{
+			"chairID": chairID,
+			"cards":   cards,
+			"cuopai":  cuopai,
 		},
 		"pushRouter": "GameMessagePush",
 	}

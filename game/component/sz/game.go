@@ -1,10 +1,13 @@
 package sz
 
 import (
+	"encoding/json"
 	"framework/remote"
 	"game/component/base"
 	"game/component/proto"
 	"math/rand/v2"
+
+	"go.uber.org/zap"
 )
 
 type GameFrame struct {
@@ -70,8 +73,8 @@ func (g *GameFrame) StartGame(session *remote.Session, user *proto.RoomUser) {
 	g.ServerMessagePush(session, GameStatusPushData(g.gameData.GameStatus, 30), users)
 	g.gameData.CurScore = g.gameRule.BaseScore * g.gameRule.AddScores[0]
 	for _, v := range g.r.GetUsers() {
-		g.ServerMessagePush(session, GamePourScorePushData(v.ChairID, g.gameData.CurScore, g.gameData.CurScore,
-			1), []string{v.UserInfo.Uid})
+		g.ServerMessagePush(session, GamePourScorePushData(g.gameData.CurChairID, g.gameData.CurScore, g.gameData.CurScore,
+			1, 0), []string{v.UserInfo.Uid})
 	}
 	// 7. 轮数推送
 	g.gameData.Round = 1
@@ -119,4 +122,99 @@ func (g *GameFrame) IsPlayingChairID(chairID int) bool {
 		}
 	}
 	return false
+}
+
+func (g *GameFrame) GameMessageHandle(user *proto.RoomUser, session *remote.Session, msg []byte) {
+	var req MessageReq
+	json.Unmarshal(msg, &req)
+	if req.Type == GameLookNotify { // 看牌操作
+		g.onGameLook(user, session, req.Data.Cuopai)
+	} else if req.Type == GamePourScoreNotify { // 加分操作
+		g.onGamePourScore(user, session, req.Data.Score, req.Data.Type)
+	}
+}
+
+// 看牌
+func (g *GameFrame) onGameLook(user *proto.RoomUser, session *remote.Session, cuopai bool) {
+	// 防御性编程
+	if user.ChairID != g.gameData.CurChairID || g.gameData.GameStatus != PourScore {
+		zap.L().Warn("游戏状态不是下分中或者用户席位不是游戏当前席位")
+		return
+	}
+
+	if !g.IsPlayingChairID(user.ChairID) {
+		zap.L().Warn("用户席位不存在")
+		return
+	}
+	// 给所有用户推送消息
+	// 当前用户看牌
+	g.gameData.UserStatusArray[user.ChairID] = Look
+	g.gameData.LookCards[user.ChairID] = 1
+	for _, v := range g.r.GetUsers() {
+		if v.ChairID == user.ChairID { // 当前用户
+			g.ServerMessagePush(session, GameLookPushData(g.gameData.CurChairID,
+				g.gameData.HandCards[user.ChairID], cuopai), []string{user.UserInfo.Uid})
+		} else { // 其他用户
+			g.ServerMessagePush(session, GameLookPushData(g.gameData.CurChairID,
+				nil, cuopai), []string{user.UserInfo.Uid})
+		}
+	}
+}
+
+// 下分
+func (g *GameFrame) onGamePourScore(user *proto.RoomUser, session *remote.Session, score int, t int) {
+	// 防御性编程
+	if user.ChairID != g.gameData.CurChairID || g.gameData.GameStatus != PourScore {
+		zap.L().Warn("游戏状态不是下分中或者用户席位不是游戏当前席位")
+		return
+	}
+
+	if !g.IsPlayingChairID(user.ChairID) {
+		zap.L().Warn("用户席位不存在")
+		return
+	}
+
+	if score < 0 {
+		zap.L().Warn("加注或跟注分数小于0")
+		return
+	}
+
+	// 更新当前用户的下分
+	if g.gameData.PourScores[user.ChairID] == nil {
+		g.gameData.PourScores[user.ChairID] = make([]int, 0)
+	}
+	g.gameData.PourScores[user.ChairID] = append(g.gameData.PourScores[user.ChairID], score)
+	// 更新当前游戏总分
+	g.gameData.CurScore += score
+	// 更新当前用户下的总分
+	g.gameData.CurScores[user.ChairID] += score
+	g.ServerMessagePush(session, GamePourScorePushData(user.ChairID, score, g.gameData.CurScores[user.ChairID],
+		g.gameData.CurScore, t), g.getAllUsers())
+	// 2. 结束下分 座次移动到下一位 推送轮次 推送游戏状态 推送操作的座次
+	g.endPourScore(session)
+}
+
+// 结束下分，座次移动，推送轮次和游戏状态
+func (g *GameFrame) endPourScore(session *remote.Session) {
+	// 1. 推送轮次 TODO 轮数大于规则的限制 结束游戏 进行结算
+	round := g.getCurRound()
+	g.ServerMessagePush(session, GameRoundPushData(round), g.getAllUsers())
+
+	// 座次往前移动一位
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		g.gameData.CurChairID++
+		g.gameData.CurChairID = g.gameData.CurChairID % g.gameData.ChairCount
+		if g.IsPlayingChairID(g.gameData.CurChairID) {
+			break
+		}
+	}
+	// 推送游戏状态
+	g.gameData.GameStatus = PourScore
+	g.ServerMessagePush(session, GameStatusPushData(g.gameData.GameStatus, 30), g.getAllUsers())
+	// 推送操作
+	g.ServerMessagePush(session, GameTurnPushData(g.gameData.CurChairID, g.gameData.CurScore), g.getAllUsers())
+}
+
+func (g *GameFrame) getCurRound() int {
+	return len(g.gameData.PourScores[g.gameData.CurChairID])
 }

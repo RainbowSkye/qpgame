@@ -288,3 +288,12 @@ func (r *Room) startGame(session *remote.Session, user *proto.RoomUser) {
 func (r *Room) GetUsers() map[string]*proto.RoomUser {
 	return r.users
 }
+
+func (r *Room) GetMessageHandle(session *remote.Session, msg []byte) {
+	// 需要游戏去处理具体的消息
+	user, ok := r.users[session.GetUid()]
+	if !ok {
+		return
+	}
+	r.GameFrame.GameMessageHandle(user, session, msg)
+}

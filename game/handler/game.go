@@ -40,7 +40,27 @@ func (g *GameHandler) RoomMessageNotify(session *remote.Session, msg []byte) any
 		common.F(biz.NotInRoom)
 	}
 	room := g.um.GetRoomById(fmt.Sprintf("%v", roomId))
+	if room == nil {
+		return common.F(biz.NotInRoom)
+	}
 	room.RoomMessageHandle(session, req)
 
+	return nil
+}
+
+func (g *GameHandler) GameMessageNotify(session *remote.Session, msg []byte) any {
+	if len(session.GetUid()) <= 0 {
+		common.F(biz.InvalidUsers)
+	}
+
+	roomId, ok := session.Get("roomId")
+	if !ok {
+		common.F(biz.NotInRoom)
+	}
+	room := g.um.GetRoomById(fmt.Sprintf("%v", roomId))
+	if room == nil {
+		return common.F(biz.NotInRoom)
+	}
+	room.GetMessageHandle(session, msg)
 	return nil
 }
