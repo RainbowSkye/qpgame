@@ -120,7 +120,7 @@ func (r *Room) getRoomSceneInfoPush(session *remote.Session) {
 		"type":       proto.GetRoomSceneInfoPush,
 		"pushRouter": "RoomMessagePush",
 		"data": map[string]any{
-			"roomId":          r.Id,
+			"roomID":          r.Id,
 			"roomCreatorInfo": r.RoomCreator,
 			"gameRule":        r.gameRule,
 			"roomUserInfoArr": roomUserInfoArr,
