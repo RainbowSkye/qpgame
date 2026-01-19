@@ -6,37 +6,47 @@ type MessageReq struct {
 }
 
 type MessageData struct {
-	Cuopai bool `json:"cuopai"`
-	Score  int  `json:"score"`
-	Type   int  `json:"type"` // 0 - 跟注， 1 - 加注
+	Cuopai  bool `json:"cuopai"`
+	Score   int  `json:"score"`
+	Type    int  `json:"type"` // 0 - 跟注， 1 - 加注
+	ChairID int  `json:"chairID"`
 }
 
 type GameStatus int
 
 type GameData struct {
-	BankerChairID   int                      `json:"bankerChairID"`
-	ChairCount      int                      `json:"chairCount"`
-	CurBureau       int                      `json:"curBureau"`
-	CurScore        int                      `json:"curScore"`
-	CurScores       []int                    `json:"curScores"`
-	GameStarter     bool                     `json:"gameStarter"`
-	GameStatus      GameStatus               `json:"gameStatus"`
-	HandCards       [][]int                  `json:"handCards"`
-	LookCards       []int                    `json:"lookCards"`
-	Loser           []int                    `json:"loser"`
-	MaxBureau       int                      `json:"maxBureau"`
-	PourScores      [][]int                  `json:"pourScores"`
-	GameType        GameType                 `json:"gameType"`
-	BaseScore       int                      `json:"baseScore"`
-	Result          any                      `json:"result"`
-	Round           int                      `json:"round"`
-	Tick            int                      `json:"tick"` // 倒计时
+	BankerChairID   int                      `json:"bankerChairID"` // 庄家座次ID
+	ChairCount      int                      `json:"chairCount"`    // 玩家数量
+	CurBureau       int                      `json:"curBureau"`     // 当前局数
+	CurScore        int                      `json:"curScore"`      // 当前游戏总分
+	CurScores       []int                    `json:"curScores"`     // 当前游戏各个用户的总分
+	GameStarter     bool                     `json:"gameStarter"`   // 游戏是否开始
+	GameStatus      GameStatus               `json:"gameStatus"`    // 游戏状态
+	HandCards       [][]int                  `json:"handCards"`     // 各玩家手牌
+	LookCards       []int                    `json:"lookCards"`     // 有哪些玩家看牌
+	Loser           []int                    `json:"loser"`         // 输家
+	Winner          []int                    `json:"winner"`        // 输家
+	MaxBureau       int                      `json:"maxBureau"`     // 最大局数
+	PourScores      [][]int                  `json:"pourScores"`    // 各个玩家下分记录
+	GameType        GameType                 `json:"gameType"`      // 游戏类型
+	BaseScore       int                      `json:"baseScore"`     // 底分
+	Result          any                      `json:"result"`        // 结果
+	Round           int                      `json:"round"`         // 当前轮数
+	Tick            int                      `json:"tick"`          // 倒计时
 	UserTrustArray  []bool                   `json:"userTrustArray"`
-	UserStatusArray []UserStatus             `json:"userStatusArray"`
-	UserWinRecord   map[string]UserWinRecord `json:"userWinRecord"`
-	ReviewRecord    []BureauReview           `json:"reviewRecord"`
+	UserStatusArray []UserStatus             `json:"userStatusArray"` // 各个玩家状态
+	UserWinRecord   map[string]UserWinRecord `json:"userWinRecord"`   // 赢家记录
+	ReviewRecord    []BureauReview           `json:"reviewRecord"`    // 回放
 	TrustTmArray    []int                    `json:"trustTmArray"`
-	CurChairID      int                      `json:"curChairID"`
+	CurChairID      int                      `json:"curChairID"` // 当前操作玩家
+}
+
+type GameResult struct {
+	Winners   []int   `json:"winners"`
+	WinScores []int   `json:"winScores"`
+	HandCards [][]int `json:"handCards"`
+	CurScores []int   `json:"curScores"`
+	Losers    []int   `json:"losers"`
 }
 
 // None 初始状态
@@ -77,9 +87,9 @@ const (
 	DanZhang CardsType = 1 // 单牌
 	DuiZi              = 2 // 对子
 	ShunZi             = 3 // 顺子
-	JinHua             = 3 // 金花
-	ShunJin            = 3 // 顺金
-	BaoZi              = 3 // 豹子
+	JinHua             = 4 // 金花
+	ShunJin            = 5 // 顺金
+	BaoZi              = 6 // 豹子
 )
 
 type UserStatus int
@@ -236,6 +246,40 @@ func GameLookPushData(chairID int, cards []int, cuopai bool) any {
 			"chairID": chairID,
 			"cards":   cards,
 			"cuopai":  cuopai,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameComparePushData(fromChairID, loseChairID, toChairID, winChairID int) any {
+	return map[string]any{
+		"type": GameComparePush,
+		"data": map[string]any{
+			"fromChairID": fromChairID,
+			"loseChairID": loseChairID,
+			"toChairID":   toChairID,
+			"winChairID":  winChairID,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameAbandonPushData(chairID int, userStatus UserStatus) any {
+	return map[string]any{
+		"type": GameAbandonPush,
+		"data": map[string]any{
+			"chairID":    chairID,
+			"userStatus": userStatus,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameResultPushData(result *GameResult) any {
+	return map[string]any{
+		"type": GameResultPush,
+		"data": map[string]any{
+			"result": result,
 		},
 		"pushRouter": "GameMessagePush",
 	}

@@ -2,7 +2,6 @@ package logic
 
 import (
 	"core/models/entity"
-	"core/service"
 	"fmt"
 	"framework/err"
 	"framework/remote"
@@ -25,7 +24,7 @@ func NewUnion(m *UnionManager) *Union {
 	}
 }
 
-func (u *Union) CreateRoom(service *service.UserService, session *remote.Session, req request.CreateRoomReq,
+func (u *Union) CreateRoom(session *remote.Session, req request.CreateRoomReq,
 	userData *entity.User) *err.Error {
 	// 1.创建一个房间，生成房间号
 	roomId := u.m.CreateRoomId()

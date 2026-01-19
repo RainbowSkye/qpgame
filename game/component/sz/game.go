@@ -1,29 +1,35 @@
 package sz
 
 import (
+	"common/utils"
 	"encoding/json"
+	"fmt"
 	"framework/remote"
 	"game/component/base"
 	"game/component/proto"
 	"math/rand/v2"
+	"time"
 
+	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
 )
 
 type GameFrame struct {
-	r        base.RoomFrame
-	gameRule proto.GameRule
-	gameData *GameData
-	logic    *Logic
+	r          base.RoomFrame
+	gameRule   proto.GameRule
+	gameData   *GameData
+	logic      *Logic
+	gameResult *GameResult
 }
 
 func NewGameFrame(rule proto.GameRule, r base.RoomFrame) *GameFrame {
 	gameData := initGameData(rule)
 	return &GameFrame{
-		r:        r,
-		gameRule: rule,
-		gameData: gameData,
-		logic:    NewLogic(),
+		r:          r,
+		gameRule:   rule,
+		gameData:   gameData,
+		logic:      NewLogic(),
+		gameResult: new(GameResult),
 	}
 }
 
@@ -40,11 +46,33 @@ func initGameData(rule proto.GameRule) *GameData {
 	g.UserStatusArray = make([]UserStatus, g.ChairCount)
 	g.UserTrustArray = []bool{false, false, false, false, false, false, false, false, false, false}
 	g.Loser = make([]int, 0)
+	g.Winner = make([]int, 0)
 	return g
 }
 
+// GetGameData 获取游戏数据
 func (g *GameFrame) GetGameData(session *remote.Session) any {
-	return g.gameData
+	user := g.r.GetUsers()[session.GetUid()]
+	var gameData GameData
+	// 深拷贝
+	copier.CopyWithOption(&gameData, g.gameData, copier.Option{DeepCopy: true})
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		if g.gameData.HandCards[i] != nil {
+			gameData.HandCards[i] = make([]int, 3)
+		} else {
+			gameData.HandCards[i] = nil
+		}
+	}
+
+	// 如果当前用户看过牌，返回牌
+	if g.gameData.LookCards[user.ChairID] == 1 {
+		gameData.HandCards[user.ChairID] = g.gameData.HandCards[user.ChairID]
+	}
+
+	fmt.Printf("g.gameData = %+v\n", *g.gameData)
+	fmt.Printf("gameData = %+v\n", gameData)
+
+	return gameData
 }
 
 func (g *GameFrame) StartGame(session *remote.Session, user *proto.RoomUser) {
@@ -131,6 +159,10 @@ func (g *GameFrame) GameMessageHandle(user *proto.RoomUser, session *remote.Sess
 		g.onGameLook(user, session, req.Data.Cuopai)
 	} else if req.Type == GamePourScoreNotify { // 加分操作
 		g.onGamePourScore(user, session, req.Data.Score, req.Data.Type)
+	} else if req.Type == GameCompareNotify { // 比牌操作
+		g.onGameCompare(user, session, req.Data.ChairID)
+	} else if req.Type == GameAbandonNotify { // 弃牌操作
+		g.onGameAbandon(user, session)
 	}
 }
 
@@ -200,6 +232,19 @@ func (g *GameFrame) endPourScore(session *remote.Session) {
 	round := g.getCurRound()
 	g.ServerMessagePush(session, GameRoundPushData(round), g.getAllUsers())
 
+	// 判断剩余玩家数量(剩一名玩家)
+	gamerCount := 0
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		if g.IsPlayingChairID(i) && !utils.Contains(g.gameData.Loser, i) {
+			gamerCount++
+		}
+	}
+	if gamerCount == 1 {
+		g.startResult(session)
+		zap.L().Info("startResult...")
+		return
+	}
+
 	// 座次往前移动一位
 	for i := 0; i < g.gameData.ChairCount; i++ {
 		g.gameData.CurChairID++
@@ -217,4 +262,153 @@ func (g *GameFrame) endPourScore(session *remote.Session) {
 
 func (g *GameFrame) getCurRound() int {
 	return len(g.gameData.PourScores[g.gameData.CurChairID])
+}
+
+// 比牌
+func (g *GameFrame) onGameCompare(curUser *proto.RoomUser, session *remote.Session, comparedChairId int) {
+	if curUser.ChairID != g.gameData.CurChairID || g.gameData.GameStatus != PourScore {
+		zap.L().Warn("游戏状态不是下分中或者用户席位不是游戏当前席位")
+		return
+	}
+
+	if !g.IsPlayingChairID(curUser.ChairID) {
+		zap.L().Warn("用户席位不存在")
+		return
+	}
+	// 下分操作 TODO
+
+	curCards := g.gameData.HandCards[curUser.ChairID]
+	comparedCards := g.gameData.HandCards[comparedChairId]
+	res := g.logic.CompareCards(curCards, comparedCards)
+	if res == 0 { // 牌面大小相同，主动比牌方输
+		res = -1
+	}
+	var winChairId int
+	var loseChairId int
+	if res == -1 { // 主动比牌用户输
+		winChairId = comparedChairId
+		loseChairId = curUser.ChairID
+	} else {
+		winChairId = curUser.ChairID
+		loseChairId = comparedChairId
+	}
+	g.gameData.Loser = append(g.gameData.Loser, loseChairId)
+	g.gameData.UserStatusArray[loseChairId] = Lose
+	gamerCount := 0
+	for i := range g.gameData.ChairCount {
+		if g.gameData.HandCards[i] != nil {
+			gamerCount++
+		}
+	}
+	if len(g.gameData.Loser)+1 == gamerCount {
+		zap.L().Info("win...")
+		g.gameData.Winner = append(g.gameData.Winner, winChairId)
+		g.gameData.UserStatusArray[loseChairId] = Win
+		fmt.Println("compare len(g.gameData.Winner[0]) = ", len(g.gameData.Winner))
+	}
+	// 将比较结果推送给所有人
+	g.ServerMessagePush(session, GameComparePushData(curUser.ChairID, loseChairId, comparedChairId, winChairId),
+		g.getAllUsers())
+
+	// 结束下分
+	g.endPourScore(session)
+}
+
+// 弃牌
+func (g *GameFrame) onGameAbandon(user *proto.RoomUser, session *remote.Session) {
+	if user.ChairID != g.gameData.CurChairID || g.gameData.GameStatus != PourScore {
+		zap.L().Warn("游戏状态不是下分中或者用户席位不是游戏当前席位")
+		return
+	}
+
+	if !g.IsPlayingChairID(user.ChairID) {
+		zap.L().Warn("用户席位不存在")
+		return
+	}
+	g.gameData.UserStatusArray[user.ChairID] = Abandon
+	g.gameData.Loser = append(g.gameData.Loser, user.ChairID)
+	gamerCount := 0
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		if g.IsPlayingChairID(i) && !utils.Contains(g.gameData.Loser, i) {
+			gamerCount++
+		}
+	}
+	if gamerCount == 1 {
+		for i := 0; i < g.gameData.ChairCount; i++ {
+			if g.IsPlayingChairID(i) && !utils.Contains(g.gameData.Loser, i) {
+				g.gameData.Winner = append(g.gameData.Winner, i)
+			}
+		}
+	}
+	g.ServerMessagePush(session, GameAbandonPushData(user.ChairID, Abandon), g.getAllUsers())
+
+	time.AfterFunc(time.Second, func() {
+		g.endPourScore(session)
+	})
+}
+
+// 推送游戏结果
+func (g *GameFrame) startResult(session *remote.Session) {
+	g.gameData.GameStatus = Result
+	g.ServerMessagePush(session, GameStatusPushData(Result, 5), g.getAllUsers())
+
+	g.gameResult.Winners = g.gameData.Winner
+	g.gameResult.HandCards = g.gameData.HandCards
+	g.gameResult.CurScores = g.gameData.CurScores
+	g.gameResult.Losers = g.gameData.Loser
+
+	// 计算各个玩家赢得的分数
+	winScores := make([]int, g.gameData.ChairCount)
+	for i := range g.gameData.ChairCount {
+		if g.gameData.PourScores[i] != nil {
+			scores := 0
+			for _, v := range g.gameData.PourScores[i] {
+				scores += v
+			}
+			winScores[i] -= scores
+			// 只有一个赢家
+			win := g.gameData.Winner[0]
+			winScores[win] += scores
+		}
+	}
+
+	g.gameResult.WinScores = winScores
+	g.ServerMessagePush(session, GameResultPushData(g.gameResult), g.getAllUsers())
+	// 重置游戏开始下一把
+	g.gameEnd(session)
+	g.resetGame(session)
+}
+
+// 重置游戏
+func (g *GameFrame) resetGame(session *remote.Session) {
+	gd := &GameData{
+		GameType:   GameType(g.gameRule.GameFrameType),
+		BaseScore:  g.gameRule.BaseScore,
+		ChairCount: g.gameRule.MaxPlayerCount,
+	}
+	gd.PourScores = make([][]int, gd.ChairCount)
+	gd.HandCards = make([][]int, gd.ChairCount)
+	gd.LookCards = make([]int, gd.ChairCount)
+	gd.CurScores = make([]int, gd.ChairCount)
+	gd.UserStatusArray = make([]UserStatus, gd.ChairCount)
+	gd.UserTrustArray = []bool{false, false, false, false, false, false, false, false, false, false}
+	gd.Loser = make([]int, 0)
+	gd.Winner = make([]int, 0)
+	gd.GameStatus = GameStatus(None)
+	g.gameData = gd
+	g.ServerMessagePush(session, GameStatusPushData(gd.GameStatus, 0), g.getAllUsers())
+	g.r.EndGame(session)
+}
+
+// 结束游戏
+func (g *GameFrame) gameEnd(session *remote.Session) {
+	// 赢的人当庄家
+	fmt.Println("gameEnd len(g.gameData.Winner[0]) = ", len(g.gameData.Winner))
+	win := g.gameData.Winner[0]
+	g.gameData.BankerChairID = win
+	time.AfterFunc(5*time.Second, func() {
+		for _, v := range g.r.GetUsers() {
+			g.r.UserReady(v.UserInfo.Uid, session)
+		}
+	})
 }

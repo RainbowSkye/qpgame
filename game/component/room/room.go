@@ -28,6 +28,21 @@ type Room struct {
 	gameStarted   bool
 }
 
+func (r *Room) GetId() string {
+	return r.Id
+}
+
+func (r *Room) EndGame(session *remote.Session) {
+	r.gameStarted = false
+	for k := range r.users {
+		r.users[k].UserStatus = proto.None
+	}
+}
+
+func (r *Room) UserReady(uid string, session *remote.Session) {
+	r.userReady(uid, session)
+}
+
 func NewRoom(roomId string, unionId int64, gameRule proto.GameRule, u base.UnionBase) *Room {
 	r := &Room{
 		Id:            roomId,

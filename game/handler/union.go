@@ -53,7 +53,7 @@ func (u *UnionHandler) CreateRoom(session *remote.Session, msg []byte) any {
 	// 3.根据游戏规则、游戏类型、用户信息（创建房间的用户）创建房间
 	// TODO 需要判断 session 中是否已经有roomID， 如果有代表此用户已经在房间中了， 就不能再次创建房间了
 	union := u.um.GetUnion(req.UnionID)
-	bizErr := union.CreateRoom(u.userService, session, req, userData)
+	bizErr := union.CreateRoom(session, req, userData)
 	if bizErr != nil {
 		return common.F(bizErr)
 	}
