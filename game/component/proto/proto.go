@@ -19,6 +19,7 @@ type GameRule struct {
 	PayDiamond     int   `json:"payDiamond"`     // 房费
 	PayType        int   `json:"payType"`        // 支付方式 1 AA支付 2 赢家支付 3 我支付
 	RoomType       int   `json:"roomType"`       // 1 正常房间 2 持续房间 3 百人房间
+	Qidui          bool  `json:"qidui"`          // 七对 一种胡牌方式 hz
 }
 
 type GameType int

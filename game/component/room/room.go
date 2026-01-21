@@ -5,6 +5,7 @@ import (
 	"framework/err"
 	"framework/remote"
 	"game/component/base"
+	"game/component/mj"
 	"game/component/proto"
 	"game/component/sz"
 	"game/models/request"
@@ -54,6 +55,8 @@ func NewRoom(roomId string, unionId int64, gameRule proto.GameRule, u base.Union
 	}
 	if gameRule.GameType == int(proto.PinSanZhang) {
 		r.GameFrame = sz.NewGameFrame(gameRule, r)
+	} else if gameRule.GameType == proto.HongZhong {
+		r.GameFrame = mj.NewGameFrame(gameRule, r)
 	}
 	return r
 }
@@ -281,6 +284,13 @@ func (r *Room) IsStartGame() bool {
 			readyUserCount++
 		}
 	}
+
+	if r.gameRule.GameType == proto.HongZhong {
+		if len(r.users) == readyUserCount && readyUserCount >= r.gameRule.MaxPlayerCount {
+			return true
+		}
+	}
+
 	if readyUserCount == len(r.users) && readyUserCount >= r.gameRule.MinPlayerCount {
 		return true
 	}
