@@ -1,6 +1,7 @@
 package mj
 
 import (
+	"encoding/json"
 	"fmt"
 	"framework/remote"
 	"game/component/base"
@@ -109,8 +110,11 @@ func (g *GameFrame) StartGame(session *remote.Session, user *proto.RoomUser) {
 }
 
 func (g *GameFrame) GameMessageHandle(user *proto.RoomUser, session *remote.Session, msg []byte) {
-	// TODO implement me
-	panic("implement me")
+	var req MessageReq
+	json.Unmarshal(msg, &req)
+	if req.Type == GameChatNotify {
+		g.onGameChat(user, session, req.Data)
+	}
 }
 
 func (g *GameFrame) ServerMessagePush(session *remote.Session, data any, users []string) {
@@ -139,8 +143,9 @@ func (g *GameFrame) sendHandCards(session *remote.Session) {
 	g.logic.washCards()
 	for i := 0; i < g.gameData.ChairCount; i++ {
 		g.gameData.HandCards[i] = g.logic.getCards(13)
+		// g.gameData.HandCards[i][0] = 31
 	}
-
+	fmt.Println("pre cards num = ", g.logic.getRestCardsCount())
 	for i := 0; i < g.gameData.ChairCount; i++ {
 		handCards := make([][]CardID, g.gameData.ChairCount)
 		for j := 0; j < g.gameData.ChairCount; j++ {
@@ -160,6 +165,7 @@ func (g *GameFrame) sendHandCards(session *remote.Session) {
 
 	// 5. 剩余牌数推送
 	restCardsCount := g.logic.getRestCardsCount()
+	fmt.Println("pre cards num = ", restCardsCount)
 	g.ServerMessagePush(session, GameRestCardsCountPushData(restCardsCount), g.getAllUsers())
 	// 7. 开始游戏状态推送
 	time.AfterFunc(time.Second, func() {
@@ -210,4 +216,8 @@ func (g *GameFrame) setTurn(chairID int, session *remote.Session) {
 func (g *GameFrame) getMyOperateArray(session *remote.Session, id int, card CardID) []OperateType {
 	var operateArray = []OperateType{Qi}
 	return operateArray
+}
+
+func (g *GameFrame) onGameChat(user *proto.RoomUser, session *remote.Session, data MessageData) {
+	g.ServerMessagePush(session, GameChatNotifyData(user.ChairID, data.Type, data.Msg, data.RecipientID), g.getAllUsers())
 }

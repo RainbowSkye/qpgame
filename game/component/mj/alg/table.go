@@ -1,7 +1,5 @@
 package alg
 
-import "fmt"
-
 type Table struct {
 	keyDic        map[string]bool
 	keyGuiDic     map[int]map[string]bool
@@ -31,10 +29,10 @@ func (t *Table) gen() {
 	feng = true
 	t.genTableNoGui(cards, level, feng, jiang)
 	t.genTableGui(feng)
-	fmt.Println(t.keyDic)
-	fmt.Println(t.keyGuiDic)
-	fmt.Println(t.keyFengDic)
-	fmt.Println(t.keyFengGuiDic)
+	// fmt.Println(t.keyDic)
+	// fmt.Println(t.keyGuiDic)
+	// fmt.Println(t.keyFengDic)
+	// fmt.Println(t.keyFengGuiDic)
 }
 
 func (t *Table) genTableNoGui(cards []int, level int, feng bool, jiang bool) {
@@ -179,4 +177,35 @@ func (t *Table) tryAdd(cards []int, guiCount int, feng bool) bool {
 	}
 	t.keyGuiDic[guiCount][key] = true
 	return true
+}
+
+func (t *Table) findCards(cards []int, guiCount int, feng bool) bool {
+	// 先编码
+	key := t.genKey(cards)
+	if guiCount > 0 {
+		if feng {
+			_, ok := t.keyFengGuiDic[guiCount][key]
+			if ok {
+				return true
+			}
+		} else {
+			_, ok := t.keyGuiDic[guiCount][key]
+			if ok {
+				return true
+			}
+		}
+	} else {
+		if feng {
+			_, ok := t.keyFengDic[key]
+			if ok {
+				return true
+			}
+		} else {
+			_, ok := t.keyDic[key]
+			if ok {
+				return true
+			}
+		}
+	}
+	return false
 }

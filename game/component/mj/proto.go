@@ -1,5 +1,20 @@
 package mj
 
+import "game/component/mj/mp"
+
+type MessageReq struct {
+	Type int         `json:"type"`
+	Data MessageData `json:"data"`
+}
+type MessageData struct {
+	ChairID     int         `json:"chairID"`
+	Type        int         `json:"type"`
+	Msg         string      `json:"msg"`
+	RecipientID int         `json:"recipientID"`
+	Card        mp.CardID   `json:"card"`
+	Operate     OperateType `json:"operate"`
+}
+
 type GameData struct {
 	BankerChairID  int             `json:"bankerChairID"`  // 庄家
 	ChairCount     int             `json:"chairCount"`     // 总座次人数
@@ -181,6 +196,19 @@ func GameBureauPushData(curBureau int) any {
 		"type": GameBureauPush,
 		"data": map[string]any{
 			"curBureau": curBureau,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameChatNotifyData(chairID, types int, msg string, recipientID int) any {
+	return map[string]any{
+		"type": GameChatPush,
+		"data": map[string]any{
+			"chairID":     chairID,
+			"type":        types,
+			"msg":         msg,
+			"recipientID": recipientID,
 		},
 		"pushRouter": "GameMessagePush",
 	}
