@@ -25,22 +25,22 @@ type GameData struct {
 	MaxBureau      int             `json:"maxBureau"`      // 最大局数
 	CurChairID     int             `json:"curChairID"`     // 当前玩家
 	UserTrustArray []int           `json:"userTrustArray"` // 托管
-	HandCards      [][]CardID      `json:"handCards"`      // 手牌
+	HandCards      [][]mp.CardID   `json:"handCards"`      // 手牌
 	OperateArrays  [][]OperateType `json:"operateArrays"`  // 操作
 	OperateRecord  []OperateRecord `json:"operateRecord"`  // 操作记录
 	RestCardsCount int             `json:"restCardsCount"` // 剩余牌数
-	Result         GameResult      `json:"result"`         // 结算
+	Result         *GameResult     `json:"result"`         // 结算
 }
 
 type GameResult struct {
-	Scores          []int       `json:"scores"`
-	HandCards       [][]int     `json:"handCards"`
-	MyMaCards       []MyMaCard  `json:"myMaCards"`
-	RestCards       []int       `json:"restCards"`
-	WinChairIDArray []int       `json:"winChairIDArray"`
-	GangChairID     int         `json:"gangChairID"`
-	FangGangArray   []int       `json:"fangGangArray"`
-	HuType          OperateType `json:"huType"`
+	Scores          []int         `json:"scores"`
+	HandCards       [][]mp.CardID `json:"handCards"`
+	MyMaCards       []MyMaCard    `json:"myMaCards"`
+	RestCards       []mp.CardID   `json:"restCards"`
+	WinChairIDArray []int         `json:"winChairIDArray"`
+	GangChairID     int           `json:"gangChairID"`
+	FangGangArray   []int         `json:"fangGangArray"`
+	HuType          OperateType   `json:"huType"`
 }
 
 type MyMaCard struct {
@@ -50,7 +50,7 @@ type MyMaCard struct {
 
 type OperateRecord struct {
 	ChairID int         `json:"chairID"`
-	Card    CardID      `json:"card"`
+	Card    mp.CardID   `json:"card"`
 	Operate OperateType `json:"operate"`
 }
 
@@ -59,11 +59,11 @@ type OperateType int
 const (
 	OperateTypeNone OperateType = iota
 	HuChi                       // 吃胡
-	HuZhi                       // 自摸
+	HuZi                        // 自摸
 	Peng                        // 碰
 	GangChi                     // 吃杠
 	GangBu                      // 补杠
-	GangZhi                     // 自摸杠
+	GangZi                      // 自摸杠
 	Guo                         // 过
 	Qi                          // 弃
 	Get                         // 拿牌
@@ -157,7 +157,7 @@ func GameDicesPushData(dice1, dice2 int) any {
 	}
 }
 
-func GameSendCardsPushData(handCards [][]CardID, chairID int) any {
+func GameSendCardsPushData(handCards [][]mp.CardID, chairID int) any {
 	return map[string]any{
 		"type": GameSendCardsPush,
 		"data": map[string]any{
@@ -209,6 +209,33 @@ func GameChatNotifyData(chairID, types int, msg string, recipientID int) any {
 			"type":        types,
 			"msg":         msg,
 			"recipientID": recipientID,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameTurnOperatePushData(chairID int, card mp.CardID, operate OperateType, success bool) any {
+	var c any
+	if card > 0 && card < 36 {
+		c = card
+	}
+	return map[string]any{
+		"type": GameTurnOperatePush,
+		"data": map[string]any{
+			"chairID": chairID,
+			"card":    c,
+			"operate": operate,
+			"success": success,
+		},
+		"pushRouter": "GameMessagePush",
+	}
+}
+
+func GameResultPushData(result GameResult) any {
+	return map[string]any{
+		"type": GameResultPush,
+		"data": map[string]any{
+			"result": result,
 		},
 		"pushRouter": "GameMessagePush",
 	}

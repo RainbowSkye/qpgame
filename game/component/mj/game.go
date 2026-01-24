@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"framework/remote"
 	"game/component/base"
+	"game/component/mj/mp"
 	"game/component/proto"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/copier"
@@ -14,6 +16,7 @@ import (
 )
 
 type GameFrame struct {
+	sync.Mutex
 	r          base.RoomFrame
 	gameRule   proto.GameRule
 	gameData   *GameData
@@ -38,7 +41,7 @@ func initGameData(rule proto.GameRule) *GameData {
 	g.GameStatus = GameStatusNone
 	g.MaxBureau = rule.Bureau
 	g.CurChairID = -1
-	g.HandCards = make([][]CardID, g.ChairCount)
+	g.HandCards = make([][]mp.CardID, g.ChairCount)
 	g.OperateArrays = make([][]OperateType, g.ChairCount)
 	g.OperateRecord = make([]OperateRecord, 0)
 	g.RestCardsCount = 3*9*4 + 4
@@ -57,13 +60,13 @@ func (g *GameFrame) GetGameData(session *remote.Session) any {
 		DeepCopy:    true,
 	})
 
-	handCards := make([][]CardID, g.gameData.ChairCount)
+	handCards := make([][]mp.CardID, g.gameData.ChairCount)
 	for i := range g.gameData.HandCards {
 		if g.gameData.HandCards[i] != nil {
 			if i == curChairId {
 				handCards[curChairId] = g.gameData.HandCards[i]
 			} else {
-				handCards[i] = make([]CardID, len(g.gameData.HandCards[i]))
+				handCards[i] = make([]mp.CardID, len(g.gameData.HandCards[i]))
 				for j := range handCards[i] {
 					handCards[i][j] = 36
 				}
@@ -114,6 +117,8 @@ func (g *GameFrame) GameMessageHandle(user *proto.RoomUser, session *remote.Sess
 	json.Unmarshal(msg, &req)
 	if req.Type == GameChatNotify {
 		g.onGameChat(user, session, req.Data)
+	} else if req.Type == GameTurnOperateNotify {
+		g.onGameTurnOperate(user, session, req.Data)
 	}
 }
 
@@ -147,12 +152,12 @@ func (g *GameFrame) sendHandCards(session *remote.Session) {
 	}
 	fmt.Println("pre cards num = ", g.logic.getRestCardsCount())
 	for i := 0; i < g.gameData.ChairCount; i++ {
-		handCards := make([][]CardID, g.gameData.ChairCount)
+		handCards := make([][]mp.CardID, g.gameData.ChairCount)
 		for j := 0; j < g.gameData.ChairCount; j++ {
 			if i == j {
 				handCards[i] = g.gameData.HandCards[i]
 			} else {
-				handCards[j] = make([]CardID, len(g.gameData.HandCards[i]))
+				handCards[j] = make([]mp.CardID, len(g.gameData.HandCards[i]))
 				for k := 0; k < len(g.gameData.HandCards[i]); k++ {
 					handCards[j][k] = 36
 				}
@@ -213,11 +218,188 @@ func (g *GameFrame) setTurn(chairID int, session *remote.Session) {
 	g.ServerMessagePush(session, GameRestCardsCountPushData(restCardsCount), g.getAllUsers())
 }
 
-func (g *GameFrame) getMyOperateArray(session *remote.Session, id int, card CardID) []OperateType {
+func (g *GameFrame) getMyOperateArray(session *remote.Session, id int, card mp.CardID) []OperateType {
 	var operateArray = []OperateType{Qi}
 	return operateArray
 }
 
 func (g *GameFrame) onGameChat(user *proto.RoomUser, session *remote.Session, data MessageData) {
 	g.ServerMessagePush(session, GameChatNotifyData(user.ChairID, data.Type, data.Msg, data.RecipientID), g.getAllUsers())
+}
+
+func (g *GameFrame) onGameTurnOperate(user *proto.RoomUser, session *remote.Session, data MessageData) {
+	if data.Operate == Qi { // 出牌
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		// 删除牌
+		g.gameData.HandCards[user.ChairID] = g.delCards(g.gameData.HandCards[user.ChairID], data.Card, 1)
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.gameData.OperateArrays[user.ChairID] = nil
+		g.nextTurn(data.Card, session)
+	} else if data.Operate == Guo { // 过
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.setTurn(user.ChairID, session)
+	} else if data.Operate == Peng { // 碰
+		if data.Card == 0 {
+			length := len(g.gameData.OperateRecord)
+			if length == 0 {
+				// 没有记录 出错了
+				zap.L().Error("用户碰操作，但是没有上一个操作记录")
+			} else {
+				data.Card = g.gameData.OperateRecord[length-1].Card
+			}
+		}
+
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.gameData.HandCards[user.ChairID] = g.delCards(g.gameData.HandCards[user.ChairID], data.Card, 2)
+		// 碰了之后只能出牌
+		g.gameData.OperateArrays[user.ChairID] = []OperateType{Qi}
+		g.ServerMessagePush(session, GameTurnPushData(user.ChairID, 0, 10,
+			g.gameData.OperateArrays[user.ChairID]), g.getAllUsers())
+		g.gameData.CurChairID = user.ChairID
+	} else if data.Operate == GangChi {
+		if data.Card == 0 {
+			length := len(g.gameData.OperateRecord)
+			if length == 0 {
+				// 没有记录 出错了
+				zap.L().Error("用户吃杠操作，但是没有上一个操作记录")
+			} else {
+				data.Card = g.gameData.OperateRecord[length-1].Card
+			}
+		}
+
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.gameData.HandCards[user.ChairID] = g.delCards(g.gameData.HandCards[user.ChairID], data.Card, 3)
+		// 杠了之后只能出牌
+		g.gameData.OperateArrays[user.ChairID] = []OperateType{Qi}
+		g.ServerMessagePush(session, GameTurnPushData(user.ChairID, 0, 10,
+			g.gameData.OperateArrays[user.ChairID]), g.getAllUsers())
+		g.gameData.CurChairID = user.ChairID
+	} else if data.Operate == HuChi { // 吃胡
+		if data.Card == 0 {
+			length := len(g.gameData.OperateRecord)
+			if length == 0 {
+				// 没有记录 出错了
+				zap.L().Error("用户吃胡操作，但是没有上一个操作记录")
+			} else {
+				data.Card = g.gameData.OperateRecord[length-1].Card
+			}
+		}
+
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		g.gameData.HandCards[user.ChairID] = append(g.gameData.HandCards[user.ChairID], data.Card)
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.gameData.OperateArrays[user.ChairID] = nil
+		g.gameData.CurChairID = user.ChairID
+		g.gameEnd(session)
+	} else if data.Operate == HuZi { // 自摸
+		g.ServerMessagePush(session, GameTurnOperatePushData(user.ChairID, data.Card, data.Operate, true), g.getAllUsers())
+		g.gameData.OperateRecord = append(g.gameData.OperateRecord, OperateRecord{user.ChairID, data.Card, data.Operate})
+		g.gameData.OperateArrays[user.ChairID] = nil
+		g.gameData.CurChairID = user.ChairID
+		g.gameEnd(session)
+	} else if data.Operate == GangZi { // 自摸杠
+
+	} else if data.Operate == GangBu { // 补杠
+
+	} else {
+
+	}
+}
+
+func (g *GameFrame) delCards(cards []mp.CardID, card mp.CardID, times int) []mp.CardID {
+	g.Lock()
+	defer g.Unlock()
+	newCards := make([]mp.CardID, 0)
+	count := 0
+	for _, v := range cards {
+		if v != card {
+			newCards = append(newCards, v)
+		} else {
+			if count == times {
+				newCards = append(newCards, v)
+			} else {
+				count++
+			}
+		}
+	}
+	return newCards
+}
+
+func (g *GameFrame) nextTurn(card mp.CardID, session *remote.Session) {
+	if card < 0 || card > 35 {
+		return
+	}
+	// 在下一个用户出牌之前，判断一下其他用户有没有操作（碰、杠、胡等）
+	hasOtherOperate := false
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		if i == g.gameData.CurChairID {
+			continue
+		}
+
+		operateArray := g.logic.getOperateArray(g.gameData.HandCards[i], card)
+		if len(operateArray) > 0 {
+			hasOtherOperate = true
+			user := g.getUserByChairID(i)
+			// todo 检查是否有bug
+			g.ServerMessagePush(session, GameTurnPushData(i, int(card), 10, operateArray), []string{user.UserInfo.Uid})
+			g.gameData.OperateArrays[i] = operateArray
+		}
+	}
+
+	if !hasOtherOperate {
+		nextTurnId := (g.gameData.CurChairID + 1) % g.gameData.ChairCount
+		g.setTurn(nextTurnId, session)
+	}
+}
+
+func (g *GameFrame) gameEnd(session *remote.Session) {
+	g.gameData.GameStatus = Result
+	g.ServerMessagePush(session, GameStatusPushData(g.gameData.GameStatus, 0), g.getAllUsers())
+	scores := make([]int, g.gameData.ChairCount)
+
+	l := len(g.gameData.OperateRecord)
+	if l == 0 {
+		zap.L().Error("没有操作记录，不可能游戏结束，请检查")
+		return
+	}
+
+	lastOperate := g.gameData.OperateRecord[l-1]
+	if lastOperate.Operate != HuChi || lastOperate.Operate != HuZi {
+		zap.L().Error("最后一次操作，不是胡牌，不可能游戏结束，请检查")
+		return
+	}
+
+	result := GameResult{
+		Scores:          scores,
+		HandCards:       g.gameData.HandCards,
+		MyMaCards:       make([]MyMaCard, 0),
+		RestCards:       g.logic.getRestCards(),
+		WinChairIDArray: []int{lastOperate.ChairID},
+		FangGangArray:   []int{},
+		HuType:          lastOperate.Operate,
+	}
+	g.gameData.Result = &result
+	g.ServerMessagePush(session, GameResultPushData(result), g.getAllUsers())
+
+	time.AfterFunc(time.Second*3, func() {
+		g.r.EndGame(session)
+		g.resetGame(session)
+	})
+}
+
+func (g *GameFrame) resetGame(session *remote.Session) {
+	g.gameData.GameStarted = false
+	g.gameData.GameStatus = GameStatusNone
+	g.ServerMessagePush(session, GameStatusPushData(g.gameData.GameStatus, 0), g.getAllUsers())
+	g.ServerMessagePush(session, GameRestCardsCountPushData(g.logic.getRestCardsCount()), g.getAllUsers())
+	for i := 0; i < g.gameData.ChairCount; i++ {
+		g.gameData.HandCards[i] = nil
+		g.gameData.OperateArrays[i] = nil
+	}
+	g.gameData.OperateRecord = make([]OperateRecord, 0)
+	g.gameData.CurChairID = -1
+	g.gameData.Result = nil
 }

@@ -2,6 +2,7 @@ package mj
 
 import (
 	"game/component/mj/alg"
+	"game/component/mj/mp"
 	"math/rand/v2"
 	"sync"
 )
@@ -21,43 +22,43 @@ func (c CardIDs) Swap(i, j int) {
 }
 
 const (
-	Wan1  CardID = 1
-	Wan2  CardID = 2
-	Wan3  CardID = 3
-	Wan4  CardID = 4
-	Wan5  CardID = 5
-	Wan6  CardID = 6
-	Wan7  CardID = 7
-	Wan8  CardID = 8
-	Wan9  CardID = 9
-	Tong1 CardID = 11
-	Tong2 CardID = 12
-	Tong3 CardID = 13
-	Tong4 CardID = 14
-	Tong5 CardID = 15
-	Tong6 CardID = 16
-	Tong7 CardID = 17
-	Tong8 CardID = 18
-	Tong9 CardID = 19
-	Tiao1 CardID = 21
-	Tiao2 CardID = 22
-	Tiao3 CardID = 23
-	Tiao4 CardID = 24
-	Tiao5 CardID = 25
-	Tiao6 CardID = 26
-	Tiao7 CardID = 27
-	Tiao8 CardID = 28
-	Tiao9 CardID = 29
-	Dong  CardID = 31
-	Nan   CardID = 32
-	Xi    CardID = 33
-	Bei   CardID = 34
-	Zhong CardID = 35
+	Wan1  mp.CardID = 1
+	Wan2  mp.CardID = 2
+	Wan3  mp.CardID = 3
+	Wan4  mp.CardID = 4
+	Wan5  mp.CardID = 5
+	Wan6  mp.CardID = 6
+	Wan7  mp.CardID = 7
+	Wan8  mp.CardID = 8
+	Wan9  mp.CardID = 9
+	Tong1 mp.CardID = 11
+	Tong2 mp.CardID = 12
+	Tong3 mp.CardID = 13
+	Tong4 mp.CardID = 14
+	Tong5 mp.CardID = 15
+	Tong6 mp.CardID = 16
+	Tong7 mp.CardID = 17
+	Tong8 mp.CardID = 18
+	Tong9 mp.CardID = 19
+	Tiao1 mp.CardID = 21
+	Tiao2 mp.CardID = 22
+	Tiao3 mp.CardID = 23
+	Tiao4 mp.CardID = 24
+	Tiao5 mp.CardID = 25
+	Tiao6 mp.CardID = 26
+	Tiao7 mp.CardID = 27
+	Tiao8 mp.CardID = 28
+	Tiao9 mp.CardID = 29
+	Dong  mp.CardID = 31
+	Nan   mp.CardID = 32
+	Xi    mp.CardID = 33
+	Bei   mp.CardID = 34
+	Zhong mp.CardID = 35
 )
 
 type Logic struct {
 	sync.RWMutex
-	cards    []CardID
+	cards    []mp.CardID
 	gameType GameType
 	qiDui    bool
 	huLogic  *alg.HuLogic
@@ -65,7 +66,7 @@ type Logic struct {
 
 func NewLogic(gameType GameType, qiDui bool) *Logic {
 	return &Logic{
-		cards:    make([]CardID, 0),
+		cards:    make([]mp.CardID, 0),
 		gameType: gameType,
 		qiDui:    qiDui,
 		huLogic:  alg.NewHuLogic(),
@@ -75,7 +76,7 @@ func NewLogic(gameType GameType, qiDui bool) *Logic {
 func (l *Logic) washCards() {
 	l.Lock()
 	defer l.Unlock()
-	l.cards = []CardID{
+	l.cards = []mp.CardID{
 		Wan1, Wan2, Wan3, Wan4, Wan5, Wan6, Wan7, Wan8, Wan9,
 		Wan1, Wan2, Wan3, Wan4, Wan5, Wan6, Wan7, Wan8, Wan9,
 		Wan1, Wan2, Wan3, Wan4, Wan5, Wan6, Wan7, Wan8, Wan9,
@@ -91,7 +92,7 @@ func (l *Logic) washCards() {
 		Zhong, Zhong, Zhong, Zhong,
 	}
 	if l.gameType == HongZhong8 {
-		l.cards = append(l.cards, []CardID{Zhong, Zhong, Zhong, Zhong}...)
+		l.cards = append(l.cards, []mp.CardID{Zhong, Zhong, Zhong, Zhong}...)
 	}
 
 	for i := 0; i < 300; i++ {
@@ -101,7 +102,7 @@ func (l *Logic) washCards() {
 	}
 }
 
-func (l *Logic) getCards(num int) []CardID {
+func (l *Logic) getCards(num int) []mp.CardID {
 	l.Lock()
 	defer l.Unlock()
 	if len(l.cards) < num {
@@ -114,4 +115,32 @@ func (l *Logic) getCards(num int) []CardID {
 
 func (l *Logic) getRestCardsCount() int {
 	return len(l.cards)
+}
+
+func (l *Logic) getOperateArray(cards []mp.CardID, card mp.CardID) []OperateType {
+	operateArray := make([]OperateType, 0)
+	sameCount := 0
+	for _, v := range cards {
+		if v == card {
+			sameCount++
+		}
+	}
+	if sameCount >= 2 {
+		operateArray = append(operateArray, Peng)
+	}
+	if sameCount >= 3 {
+		operateArray = append(operateArray, GangChi)
+	}
+
+	if l.huLogic.CheckHu(cards, []mp.CardID{Zhong}, card) {
+		operateArray = append(operateArray, HuChi)
+	}
+	if len(operateArray) > 0 {
+		operateArray = append(operateArray, Guo)
+	}
+	return operateArray
+}
+
+func (l *Logic) getRestCards() []mp.CardID {
+	return l.cards
 }
